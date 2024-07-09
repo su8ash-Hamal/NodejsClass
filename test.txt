@@ -1,0 +1,26 @@
+    const body = [];
+    req.on("data", (chunk) => {
+      console.log("Chunk ", chunk);
+
+      body.push(chunk);
+    });
+
+    let msg = "";
+
+    return req.on("end", () => {
+      const parseBody = Buffer.concat(body).toString();
+      console.log("What is parsed", parseBody);
+
+      msg = parseBody.split("=")[1];
+      console.log("Current msg", msg);
+
+      fs.appendFile("test.txt", msg, (err) => {
+        if (err) {
+          console.log(err.message);
+        } else {
+          res.setHeader("Location", "/");
+          res.statusCode = "302";
+          return res.end();
+        }
+      });
+    });
