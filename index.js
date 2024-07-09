@@ -95,16 +95,36 @@
 
 // restTest(10, 20);
 
-let a = 10;
+// let a = 10;
 
-let test = {
-  id: "Hello",
-  name: "Jello",
-  age: "trello",
+// let test = {
+//   id: "Hello",
+//   name: "Jello",
+//   age: "trello",
+//   test: () => {
+//     console.log("Test function from objext");
+//     return "return gareko Value";
+//   },
+// };
+
+// let { name, age } = test;
+
+// console.log(test);
+// console.log(name);
+// console.log(age);
+// console.log(test.test());
+
+let amrit = (callback) => {
+  setTimeout(() => {
+    console.log("This is after 5 sec");
+    callback(12);
+    // return 12;
+  }, 5000);
 };
 
-let { name, age } = test;
+function afterAmrit(val) {
+  console.log("After Calling amrit", val);
+}
 
-console.log(test);
-console.log(name);
-console.log(age);
+console.log("Initial");
+let value = amrit(afterAmrit);
