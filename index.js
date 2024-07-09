@@ -95,6 +95,8 @@
 
 // restTest(10, 20);
 
+let a = 10;
+
 let test = {
   id: "Hello",
   name: "Jello",
