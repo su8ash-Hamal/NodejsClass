@@ -1,15 +1,14 @@
-// server.mjs
-// import { createServer } from "node:http";
+const express = require("express");
+const bodyParser = require("body-parser");
+const app = express();
+const port = 3000;
 
-const http = require("http");
+const mysql = require("mysql");
 
-const server = http.createServer((req, res) => {
-  console.log(req.url);
-  console.log(req.method);
+app.use(bodyParser());
 
-  if (req.url === "/watch" && req.method === "GET") {
-    res.writeHead(200, { "Content-Type": "text/html" });
-    res.end(`<!DOCTYPE html>
+app.get("/watch", (req, res) => {
+  res.status(200).send(`<!DOCTYPE html>
     <html lang="en">
       <head>
         <meta charset="UTF-8" />
@@ -30,62 +29,31 @@ const server = http.createServer((req, res) => {
       </body>
     </html>
 `);
-    return;
-  }
-
-  if (req.url === "/register" && req.method === "POST") {
-    let body = [];
-
-    req.on("data", (chunk) => {
-      console.log(chunk);
-      body.push(chunk);
-    });
-
-    return req.on("end", (err) => {
-      if (err) {
-        res.writeHead(500, { "Content-Type": "text/plain" });
-        res.end("ERROR fOUND!\n");
-        return;
-      } else {
-        let ar = Buffer.concat(body).toString();
-
-        let parse = ar.split("&");
-        console.log(ar);
-        console.log(parse.split);
-
-        res.writeHead(200, { "Content-Type": "application/json" });
-
-        let obje1 = {
-          username: parse[0].split("=")[1],
-          email: parse[1].split("=")[1],
-          password: parse[2].split("=")[1],
-        };
-
-        res.end(JSON.stringify(obje1));
-
-        //         res.end(`<!DOCTYPE html>
-        // <html lang="en">
-        //   <head>
-        //     <meta charset="UTF-8" />
-        //     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        //     <title>Document</title>
-        //   </head>
-        //   <body>
-        //     <h2>Thank you ${parse[0].split("=")[1]}</h2>
-        //   </body>
-        // </html>`);
-        return;
-      }
-    });
-  }
-
-  res.writeHead(200, { "Content-Type": "text/plain" });
-  res.end("Hello World!\n");
 });
 
-// starts a simple http server locally on port 3000
-server.listen(3000, "127.0.0.1", () => {
-  console.log("Listening on 127.0.0.1:3000");
+app.post("/register", (req, res) => {
+  console.log(req.body);
+
+  var connection = mysql.createConnection({
+    host: "localhost",
+    user: "root",
+    password: "",
+    database: "nodejs",
+  });
+
+  connection.connect();
+
+  connection.query("SELECT * from users", function (error, results, fields) {
+    if (error) throw error;
+    console.log("The solution is: ", results);
+    res.send(results);
+  });
+
+  connection.end();
 });
 
-// run with `node server.mjs`
+// app.post()
+
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`);
+});
