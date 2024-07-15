@@ -1,11 +1,21 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+const mysql = require("mysql");
+
 const app = express();
 const port = 3000;
 
-const mysql = require("mysql");
+// Middleware to parse JSON data
+app.use(bodyParser.json());
 
-app.use(bodyParser());
+// Database connection pool
+const pool = mysql.createPool({
+  connectionLimit: 10, // Limit of using connection
+  host: "localhost",
+  user: "root",
+  password: "",
+  database: "nodejs",
+});
 
 app.get("/watch", (req, res) => {
   res.status(200).send(`<!DOCTYPE html>
@@ -28,32 +38,212 @@ app.get("/watch", (req, res) => {
         </form>
       </body>
     </html>
-`);
+  `);
 });
 
 app.post("/register", (req, res) => {
-  console.log(req.body);
+  const body = req.body;
+  // Checks the connection (this is first connection +1)
+  pool.getConnection((err, connection) => {
+    // if connection not found
+    if (err) {
+      console.error("Error getting a connection from the pool:", err);
+      res.status(400).send({
+        success: false,
+        error: err,
+      });
+      return;
+    }
 
-  var connection = mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    password: "",
-    database: "nodejs",
+    // if connection is avaIlable
+    connection.query(
+      `SELECT * FROM users WHERE email=?`,
+      [body.email],
+      (error, results) => {
+        // If any error occurs when using the query
+        if (error) {
+          console.error("Error querying the database:", error);
+          res.status(400).send({
+            success: false,
+            error: error,
+          });
+          connection.release(); // Release the connection back to the pool (-1)
+          return;
+        }
+
+        // if no user with the email is found
+        if (results.length > 0) {
+          res.status(400).send({
+            success: false,
+            error: "Given email is already in use.",
+          });
+          connection.release(); // Release the connection back to the pool (-1)
+        } else {
+          connection.query(
+            `INSERT INTO users (name, nickname, email, password) VALUES (?, ?, ?, ?)`,
+            [body.name, body.nickname, body.email, body.password],
+            (error, results) => {
+              connection.release(); // Release the connection back to the pool (-1)
+
+              // If any error occurs when using the query
+              if (error) {
+                console.error("Error inserting into users:", error);
+                res.status(400).send({
+                  success: false,
+                  error: error,
+                });
+                return;
+              } else {
+                console.log("The result is:", results);
+
+                // If insering data is complete.
+                res.status(200).send({
+                  success: true,
+                  message: "User registered successfully",
+                  results: results,
+                });
+              }
+            }
+          );
+        }
+      }
+    );
   });
-
-  connection.connect();
-
-  connection.query("SELECT * from users", function (error, results, fields) {
-    if (error) throw error;
-    console.log("The solution is: ", results);
-    res.send(results);
-  });
-
-  connection.end();
 });
 
-// app.post()
+app.post("/login", (req, res) => {
+  const body = req.body;
 
+  // If any error occurs when using the query
+  pool.getConnection((err, connection) => {
+    if (err) {
+      console.error("Error getting a connection from the pool:", err);
+      res.status(400).send({
+        success: false,
+        error: err,
+      });
+      return;
+    }
+
+    connection.query(
+      `SELECT * FROM users WHERE email=?`,
+      [body.email],
+      (error, results) => {
+        if (error) {
+          console.error("Error querying the database:", error);
+          res.status(400).send({
+            success: false,
+            error: error,
+          });
+          connection.release();
+          return;
+        }
+
+        if (results.length < 1) {
+          res.status(400).send({
+            success: false,
+            error: "No such user found",
+          });
+          connection.release();
+        } else {
+          connection.release();
+
+          if (body.password === results[0].password) {
+            res.status(200).send({
+              success: true,
+              message: "User login successfully",
+              results: {
+                id: results[0].id,
+              },
+            });
+          } else {
+            res.status(400).send({
+              success: false,
+              error: "Credentials doesn't match",
+            });
+          }
+        }
+      }
+    );
+  });
+});
+
+// Same as login but with different approach
+app.post("/login2", async (req, res) => {
+  const body = req.body;
+
+  try {
+    // Get a connection from the pool
+    const connection = await getConnectionAsync(pool);
+
+    // Query the database for the user with the provided email, it calls queryAsync Method/Function which gives either reject or resolve as retuen.
+    const results = await queryAsync(
+      connection,
+      `SELECT * FROM users WHERE email=?`,
+      [body.email]
+    );
+
+    // Release the connection back to the pool
+    connection.release();
+
+    console.log(results);
+
+    // Check if no user found with the given email
+    if (results.length < 1) {
+      throw new Error("No such user found!!");
+    }
+
+    if (body.password === results[0].password) {
+      res.status(200).send({
+        success: true,
+        message: "User login successful",
+        results: {
+          id: results[0].id,
+        },
+      });
+    } else {
+      throw new Error("Credentials Error");
+    }
+  } catch (error) {
+    console.error("Error in login:", error);
+    res.status(400).send({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// Helper function to do pool.getConnection using Promise
+function getConnectionAsync(pool) {
+  return new Promise((resolve, reject) => {
+    pool.getConnection((err, connection) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(connection);
+      }
+    });
+  });
+}
+
+// Helper function to do connection.query using Promise
+function queryAsync(connection, sql, values) {
+  return new Promise((resolve, reject) => {
+    console.log("Query Sync");
+
+    connection.query(sql, values, (error, results) => {
+      if (error) {
+        console.log("Error ", error);
+        reject(error);
+      } else {
+        console.log("Resolved ");
+        resolve(results);
+      }
+    });
+  });
+}
+
+// Start the server
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
