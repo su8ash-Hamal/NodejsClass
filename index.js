@@ -114,17 +114,85 @@
 // console.log(age);
 // console.log(test.test());
 
-let amrit = (callback) => {
-  setTimeout(() => {
-    console.log("This is after 5 sec");
-    callback(12);
-    // return 12;
-  }, 5000);
-};
+// let amrit = (callback) => {
+//   setTimeout(() => {
+//     console.log("This is after 5 sec");
+//     callback(12);
+//     // return 12;
+//   }, 5000);
+// };
 
-function afterAmrit(val) {
-  console.log("After Calling amrit", val);
+// function afterAmrit(val) {
+//   console.log("After Calling amrit", val);
+// }
+
+// console.log("Initial");
+// let value = amrit(afterAmrit);
+
+// function panNikala(callback) {
+//   setTimeout(() => {
+//     callback("🍳", andaHala);
+//   }, 1000);
+// }
+
+// function telHala(data, callback) {
+//   setTimeout(() => {
+//     callback(data + "🛢️");
+//   }, 2000);
+// }
+
+// function andaHala(data, callback) {
+//   setTimeout(() => {
+//     console.log(data + "🥚");
+//   }, 2000);
+// }
+
+// panNikala();
+
+const bcrypt = require("bcrypt");
+const saltRounds = 12;
+
+// This is after learning promise
+let text;
+
+bcrypt.hash("subash", saltRounds).then((data) => {
+  console.log("Using Promise only");
+  console.log(data);
+
+  text = data;
+  // to compare
+  bcrypt.compare("subash", text).then((data) => {
+    console.log("Using Promise only");
+    console.log(data);
+  });
+
+  // to compare
+  bcrypt.compare("subash", text).then((data) => {
+    console.log("Using Promise only");
+    console.log(data);
+  });
+});
+
+console.log("Using async await");
+
+// This is after learning promise - async await
+async function checkName() {
+  text = await bcrypt.hash("subash", saltRounds);
+  console.log("Using async await");
+  console.log(text);
+  compare();
 }
 
-console.log("Initial");
-let value = amrit(afterAmrit);
+async function compare() {
+  // to compare
+  const comparision = await bcrypt.compare("subash", text);
+  console.log("Using async await");
+  console.log(comparision);
+
+  // to compare
+  const comparision2 = await bcrypt.compare("subas", text);
+  console.log("Using async await");
+  console.log(comparision2);
+}
+
+checkName();
