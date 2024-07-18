@@ -4,9 +4,11 @@ const mysql = require("mysql");
 
 const app = express();
 const port = 3000;
+const upload = require("./multerConfig");
 
 // Middleware to parse JSON data
 app.use(bodyParser.json());
+app.use("/uploads", express.static("uploads"));
 
 // Database connection pool
 const pool = mysql.createPool({
@@ -16,6 +18,15 @@ const pool = mysql.createPool({
   password: "",
   database: "nodejs",
 });
+
+const myLogger = function (req, res, next) {
+  if (req.url === "/login") {
+    res.send("No Thank you");
+  }
+  next();
+};
+
+app.use(myLogger);
 
 app.get("/watch", (req, res) => {
   res.status(200).send(`<!DOCTYPE html>
@@ -168,8 +179,72 @@ app.post("/login", (req, res) => {
   });
 });
 
+app.post("/upload", upload.single("abc"), (req, res) => {
+  console.log(req.file);
+
+  console.log(req.body);
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <h2>Thank you</h2>
+    <img src="http://127.0.0.1:3000/${req.file.path}" />
+  </body>
+</html>
+`);
+});
+
 // Same as login but with different approach
 app.post("/login2", async (req, res) => {
+  const body = req.body;
+
+  try {
+    // Get a connection from the pool
+    const connection = await getConnectionAsync(pool);
+
+    // Query the database for the user with the provided email, it calls queryAsync Method/Function which gives either reject or resolve as retuen.
+    const results = await queryAsync(
+      connection,
+      `SELECT * FROM users WHERE email=?`,
+      [body.email]
+    );
+
+    // Release the connection back to the pool
+    connection.release();
+
+    console.log(results);
+
+    // Check if no user found with the given email
+    if (results.length < 1) {
+      throw new Error("No such user found!!");
+    }
+
+    if (body.password === results[0].password) {
+      res.status(200).send({
+        success: true,
+        message: "User login successful",
+        results: {
+          id: results[0].id,
+        },
+      });
+    } else {
+      throw new Error("Credentials Error");
+    }
+  } catch (error) {
+    console.error("Error in login:", error);
+    res.status(400).send({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// Same as login but with different approach
+app.post("/login3", async (req, res) => {
   const body = req.body;
 
   try {
