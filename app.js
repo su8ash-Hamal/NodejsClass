@@ -5,6 +5,8 @@ const mysql = require("mysql");
 const app = express();
 const port = 3000;
 const upload = require("./multerConfig");
+const ErrorHandler = require("./middleware/ErrorHandler");
+const AsyncHandler = require("./middleware/AsyncHandler");
 
 // Middleware to parse JSON data
 app.use(bodyParser.json());
@@ -199,10 +201,12 @@ app.post("/upload", upload.single("abc"), (req, res) => {
 });
 
 // Same as login but with different approach
-app.post("/login2", async (req, res) => {
-  const body = req.body;
+app.post(
+  "/login2",
+  AsyncHandler(async (req, res) => {
+    const body = req.body;
 
-  try {
+    // try {
     // Get a connection from the pool
     const connection = await getConnectionAsync(pool);
 
@@ -234,58 +238,60 @@ app.post("/login2", async (req, res) => {
     } else {
       throw new Error("Credentials Error");
     }
-  } catch (error) {
-    console.error("Error in login:", error);
-    res.status(400).send({
-      success: false,
-      error: error.message,
-    });
-  }
-});
+    // } catch (error) {
+    //   console.error("Error in login:", error);
+    //   res.status(400).send({
+    //     success: false,
+    //     error: error.message,
+    //   });
+    // }
+  })
+);
 
 // Same as login but with different approach
-app.post("/login3", async (req, res) => {
+// Check this without AsyncHandler What will be the case?
+app.post("/login3", async (req, res, next) => {
   const body = req.body;
 
-  try {
-    // Get a connection from the pool
-    const connection = await getConnectionAsync(pool);
+  // try {
+  // Get a connection from the pool
+  const connection = await getConnectionAsync(pool);
 
-    // Query the database for the user with the provided email, it calls queryAsync Method/Function which gives either reject or resolve as retuen.
-    const results = await queryAsync(
-      connection,
-      `SELECT * FROM users WHERE email=?`,
-      [body.email]
-    );
+  // Query the database for the user with the provided email, it calls queryAsync Method/Function which gives either reject or resolve as retuen.
+  const results = await queryAsync(
+    connection,
+    `SELECT * FROM users WHERE email=?`,
+    [body.email]
+  );
 
-    // Release the connection back to the pool
-    connection.release();
+  // Release the connection back to the pool
+  connection.release();
 
-    console.log(results);
+  console.log(results);
 
-    // Check if no user found with the given email
-    if (results.length < 1) {
-      throw new Error("No such user found!!");
-    }
-
-    if (body.password === results[0].password) {
-      res.status(200).send({
-        success: true,
-        message: "User login successful",
-        results: {
-          id: results[0].id,
-        },
-      });
-    } else {
-      throw new Error("Credentials Error");
-    }
-  } catch (error) {
-    console.error("Error in login:", error);
-    res.status(400).send({
-      success: false,
-      error: error.message,
-    });
+  // Check if no user found with the given email
+  if (results.length < 1) {
+    next(new Error("No such user found!!"));
   }
+
+  if (body.password === results[0].password) {
+    res.status(200).send({
+      success: true,
+      message: "User login successful",
+      results: {
+        id: results[0].id,
+      },
+    });
+  } else {
+    next(new Error("Credentials Error"));
+  }
+  // } catch (error) {
+  //   console.error("Error in login:", error);
+  //   res.status(400).send({
+  //     success: false,
+  //     error: error.message,
+  //   });
+  // }
 });
 
 // Helper function to do pool.getConnection using Promise
@@ -317,6 +323,9 @@ function queryAsync(connection, sql, values) {
     });
   });
 }
+
+// Try using this middleware before the login route what will happen...
+app.use(ErrorHandler);
 
 // Start the server
 app.listen(port, () => {
