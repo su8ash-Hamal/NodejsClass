@@ -1,0 +1,173 @@
+const express = require("express");
+const bodyParser = require("body-parser");
+const mysql = require("mysql");
+
+const jwt = require("jsonwebtoken");
+
+const app = express();
+const port = 3000;
+const upload = require("./multerConfig");
+const ErrorHandler = require("./middleware/ErrorHandler");
+const AsyncHandler = require("./middleware/AsyncHandler");
+
+// Middleware to parse JSON data
+app.use(bodyParser.json());
+app.use("/uploads", express.static("uploads"));
+
+// Database connection pool
+const pool = mysql.createPool({
+  connectionLimit: 10, // Limit of using connection
+  host: "localhost",
+  user: "root",
+  password: "",
+  database: "nodejs",
+});
+
+// Same as login but with different approach
+app.post(
+  "/login",
+  AsyncHandler(async (req, res) => {
+    const body = req.body;
+
+    // try {
+    // Get a connection from the pool
+    const connection = await getConnectionAsync(pool);
+
+    // Query the database for the user with the provided email, it calls queryAsync Method/Function which gives either reject or resolve as retuen.
+    const results = await queryAsync(
+      connection,
+      `SELECT * FROM users WHERE email=?`,
+      [body.email]
+    );
+
+    // Release the connection back to the pool
+    connection.release();
+
+    console.log(results);
+
+    // Check if no user found with the given email
+    if (results.length < 1) {
+      throw new Error("No such user found!!");
+    }
+
+    if (body.password === results[0].password) {
+      const token = jwt.sign({ id: results[0].id }, "abc", {
+        expiresIn: "1m",
+      });
+
+      console.log(token);
+
+      res.status(200).send({
+        success: true,
+        message: "User login successful",
+        results: {
+          token: token,
+        },
+      });
+    } else {
+      throw new Error("Credentials Error");
+    }
+    // } catch (error) {
+    //   console.error("Error in login:", error);
+    //   res.status(400).send({
+    //     success: false,
+    //     error: error.message,
+    //   });
+    // }
+  })
+);
+
+// Same as login but with different approach
+app.put(
+  "/user",
+  AsyncHandler(async (req, res) => {
+    const body = req.body;
+
+    console.log(body.token);
+
+    const token = await jwt.verify(body.token, "abc", function (err, decoded) {
+      if (err) {
+        console.log(err);
+        throw new Error(err);
+      }
+      console.log("Decoded ", decoded.id); // bar
+      return decoded;
+    });
+
+    // try {
+    // Get a connection from the pool
+    const connection = await getConnectionAsync(pool);
+
+    // Query the database for the user with the provided email, it calls queryAsync Method/Function which gives either reject or resolve as retuen.
+    const results = await queryAsync(
+      connection,
+      `UPDATE users set id=10 WHERE id=?`,
+      [token.id]
+    );
+
+    // Release the connection back to the pool
+    connection.release();
+
+    console.log(results);
+
+    // Check if no user found with the given email
+    // if (results.length < 1) {
+    //   throw new Error("No such user found!!");
+    // }
+
+    // if (body.password === results[0].password) {
+    res.status(200).send({
+      success: true,
+      message: "User login successful",
+      results: {},
+    });
+    // } else {
+    //   throw new Error("Credentials Error");
+    // }
+    // } catch (error) {
+    //   console.error("Error in login:", error);
+    //   res.status(400).send({
+    //     success: false,
+    //     error: error.message,
+    //   });
+    // }
+  })
+);
+
+// Helper function to do pool.getConnection using Promise
+function getConnectionAsync(pool) {
+  return new Promise((resolve, reject) => {
+    pool.getConnection((err, connection) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(connection);
+      }
+    });
+  });
+}
+
+// Helper function to do connection.query using Promise
+function queryAsync(connection, sql, values) {
+  return new Promise((resolve, reject) => {
+    console.log("Query Sync");
+
+    connection.query(sql, values, (error, results) => {
+      if (error) {
+        console.log("Error ", error);
+        reject(error);
+      } else {
+        console.log("Resolved ");
+        resolve(results);
+      }
+    });
+  });
+}
+
+// Try using this middleware before the login route what will happen...
+app.use(ErrorHandler);
+
+// Start the server
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`);
+});
