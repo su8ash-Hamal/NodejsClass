@@ -1,16 +1,19 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 
-const app = express();
 const mongoose = require("mongoose");
 
+const cookieParser = require("cookie-parser");
+
+const app = express();
+
 app.use(bodyParser.json());
+app.use(cookieParser());
 app.use(
   bodyParser.urlencoded({
     extended: true,
   })
 );
-
 
 // replace process.env.DB_URL with your DB Url
 // Go to MongoDB cloud then go to database the go to connect ang then go to compass. There you find a url with mongodb+srv://<username>:<password>@testcluster.pnaf28h.mongodb.net/
@@ -28,8 +31,12 @@ mongoose
   });
 
 const cats = require("./controller/cat");
+const rats = require("./controller/rat");
+const users = require("./controller/user");
 
-app.use("/api", cats);
+app.use("/cats", cats);
+app.use("/rats", rats);
+app.use("/users", users);
 
 app.listen(process.env.PORT, (err) => {
   if (err) {
