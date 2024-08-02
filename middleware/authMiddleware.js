@@ -1,9 +1,9 @@
 const jwt = require("jsonwebtoken");
 
-const JWT_SECRET = process.env.subash; 
+const JWT_SECRET = process.env.subash;
 
 const authenticate = (req, res, next) => {
-  const token = req.cookies.token;
+  const token = req.cookies.naToken;
   if (!token) {
     return res.status(401).send("Access denied. No token provided.");
   }

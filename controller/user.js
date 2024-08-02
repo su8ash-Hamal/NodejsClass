@@ -1,5 +1,4 @@
 const express = require("express");
-const Rat = require("../model/rat");
 const router = express.Router();
 const jwt = require("jsonwebtoken");
 
@@ -31,8 +30,10 @@ router.post("/login", async (req, res) => {
     if (!isMatch) {
       return res.status(401).send("Invalid username or password");
     }
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "1h" });
-    res.cookie("token", token, { httpOnly: true });
+    const token = jwt.sign({ userKoID: user._id }, JWT_SECRET, {
+      expiresIn: "1m",
+    });
+    res.cookie("naToken", token, { httpOnly: true });
     res.status(200).send({ message: "Login successful", id: user._id, token });
   } catch (error) {
     res.status(500).send(error.message);
