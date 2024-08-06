@@ -7,7 +7,7 @@ const cookieParser = require("cookie-parser");
 
 const app = express();
 
-app.use(bodyParser.json());
+app.use(express.json());
 app.use(cookieParser());
 app.use(
   bodyParser.urlencoded({
@@ -51,6 +51,43 @@ async function main() {
   console.log(allUsers);
   return allUsers;
 }
+
+const https = require("node:https");
+
+const gettingData = () => {
+  return new Promise((resolve, reject) => {
+    https
+      .get("https://jsonplaceholder.typicode.com/posts", (res) => {
+        // console.log("statusCode:", res.statusCode);
+        // console.log("headers:", res.headers);
+
+        let finalData = "";
+
+        res.on("data", (d) => {
+          // resolve(d);
+          finalData += d;
+          // console.log(d);
+          // console.log("================");
+        });
+
+        res.on("end", () => {
+          resolve(finalData);
+        });
+      })
+      .on("error", (e) => {
+        console.error(e);
+        reject("Error during data fetch");
+      });
+  });
+};
+
+app.get("/testing", async (req, res) => {
+  const data = await gettingData();
+  const parsedData = JSON.parse(data);
+
+  console.log(parsedData);
+  res.send(parsedData);
+});
 
 app.post("/", async (req, res) => {
   const response = await prisma.user.create({
