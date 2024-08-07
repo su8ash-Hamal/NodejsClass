@@ -39,6 +39,7 @@ app.use(
 // app.use("/users", users);
 
 const { PrismaClient } = require("@prisma/client");
+const { default: axios } = require("axios");
 
 const prisma = new PrismaClient();
 
@@ -52,41 +53,52 @@ async function main() {
   return allUsers;
 }
 
-const https = require("node:https");
+// const https = require("node:https");
 
-const gettingData = () => {
-  return new Promise((resolve, reject) => {
-    https
-      .get("https://jsonplaceholder.typicode.com/posts", (res) => {
-        // console.log("statusCode:", res.statusCode);
-        // console.log("headers:", res.headers);
+// const gettingData = () => {
+//   return new Promise((resolve, reject) => {
+//     https
+//       .get("https://jsonplaceholder.typicode.com/posts", (res) => {
+//         // console.log("statusCode:", res.statusCode);
+//         // console.log("headers:", res.headers);
 
-        let finalData = "";
+//         let finalData = "";
 
-        res.on("data", (d) => {
-          // resolve(d);
-          finalData += d;
-          // console.log(d);
-          // console.log("================");
-        });
+//         res.on("data", (d) => {
+//           // resolve(d);
+//           finalData += d;
+//           // console.log(d);
+//           // console.log("================");
+//         });
 
-        res.on("end", () => {
-          resolve(finalData);
-        });
-      })
-      .on("error", (e) => {
-        console.error(e);
-        reject("Error during data fetch");
-      });
-  });
-};
+//         res.on("end", () => {
+//           resolve(finalData);
+//         });
+//       })
+//       .on("error", (e) => {
+//         console.error(e);
+//         reject("Error during data fetch");
+//       });
+//   });
+// };
 
 app.get("/testing", async (req, res) => {
-  const data = await gettingData();
-  const parsedData = JSON.parse(data);
+  try {
+    const axiosKoData = await axios.get(
+      "https://jsonplaceholder.typide.com/posts"
+    );
+    console.log(axiosKoData.data);
+    res.send(axiosKoData.data);
+  } catch (error) {
+    console.log(error);
+    res.send("Error found");
+  }
 
-  console.log(parsedData);
-  res.send(parsedData);
+  // console.log(data);
+
+  // const parsedData = JSON.parse(data);
+
+  // console.log(parsedData);
 });
 
 app.post("/", async (req, res) => {
